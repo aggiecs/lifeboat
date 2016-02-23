@@ -1,0 +1,153 @@
+{% extends "lifeboat/base.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+    <li><a href="{% url "lifeboat-index" %}">Summary</a></li>
+    {% if module %}
+    <li ><a href="{% url "lifeboat-module" module.id %}">Module {{ module.name }}(id={{ module.id }})</a></li>
+    {% endif %}
+    <li class="active">Error (id={{ error.id }})</li>
+{% endblock %}
+
+{% block js %}
+<script type="text/javascript">
+$(window).ready(function() {
+    var escaped_traceback = "{% for line in error.traceback.splitlines %} {{ line }}<br />{% endfor %}";
+    var exception = "{{ error.exception }}";
+    var tb_message = "{{ error.traceback_msg }}";
+    var traceback_panel = $("#traceback_panel");
+    traceback_panel.html(escaped_traceback);
+
+    var vars = {{ error.vars|safe }};
+    var var_panel = $(".var_panel");
+    var vars_html = "";
+    for(var key in vars){
+        vars_html += key + ": " + vars[key] + "<br />";
+    }
+    var_panel.html(vars_html);
+
+
+    var orig_destination_html = '<input id="id_destination" maxlength="200" name="destination" type="text">';
+    var callback_rescue_destination_choices = {{ rescue_callback_choices|safe }};
+
+    var rescue_type_selector = $("#id_type");
+    rescue_type_selector.on("change", function(event){
+        var value = event.target.value;
+        var destination_field = $("#id_destination");
+        var dest_html = "";
+        if(value == "callback"){
+            dest_html = "<select id='id_destination' name='destination'>";
+            for(var choice in callback_rescue_destination_choices){
+                dest_html += "<option value='" + choice + "'>" + callback_rescue_destination_choices[choice] + "</option>";
+            }
+            dest_html += "</select>"
+        }else{
+            dest_html = orig_destination_html;
+        }
+        destination_field.parent().html(dest_html);
+    });
+    $(".rescue_pattern_popover").popover({ trigger: "hover" });
+
+});
+</script>
+{% endblock %}
+
+{% block css %}
+<style type="text/css" media="screen">
+.var_panel{
+    display: block;
+    padding: 10px;
+    margin: 0 0 10.5px;
+    font-size: 14px;
+    line-height: 1.428571429;
+    color: #333;
+    word-break: break-all;
+    word-wrap: break-word;
+    background-color: #eee;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.rescues_panel{
+    display: block;
+    padding: 10px;
+    margin: 0 0 10.5px;
+    font-size: 14px;
+    line-height: 1.428571429;
+    color: #333;
+    word-break: break-all;
+    word-wrap: break-word;
+    background-color: #eee;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+.create_rescue_link{
+    float:right;
+}
+#rescue_form_table{
+    max-width:100%;
+}
+.modal-dialog{
+    min-width: 35em;
+}
+#rescue_form_table td{
+    padding-bottom: 1em;
+}
+#rescue_form_table select{
+    max-width: 25em;
+}
+#rescue_form_table input{
+    width: 100%;
+}
+.status_handled{
+
+}
+.status_unhandled{
+    color:#f0ad4e;
+}
+.status_handled{
+    color:#18bc9c;
+}
+.status_failed{
+    color:#d9534f;
+}
+#error_status_label{
+    padding: 0 0.5em;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="row well">
+        <div id="traceback_overview" class="col-lg-12">
+            <legend>Error Overview:
+                 {% if error.status == "handled" %}
+                    <span id="error_status_label" class="label label-success">Handled</span>
+                 {% elif error.status == "unhandled" %}
+                    <span id="error_status_label" class="label label-warning">Unhandled</span>
+                 {% elif error.status == "failed" %}
+                    <span id="error_status_label" class="label label-danger">Failed</span>
+                 {% endif %}
+                <a class="cursor_pointer create_rescue_link" data-toggle="modal" data-target="#create_rescue_modal">Create Rescue</a>
+            </legend>
+            <h3>Traceback:</h3>
+            <pre id="traceback_panel" >
+                {{ error.traceback }}
+            </pre>
+        </div>
+        <div id="vars_overview" class="col-lg-12">
+            <h3>Variables:</h3>
+            <div id="var_panel" class="var_panel">
+            </div>
+        </div>
+
+    {% include "lifeboat/applied_rescues_table.html" %}
+
+
+    {% include "lifeboat/rescue_table.html" %}
+
+    <div id="create_rescue_modal" class="modal fade" role="dialog">
+        {% include "lifeboat/edit_rescue_form.html" with is_modal=True %}
+    </div>
+
+{% endblock %}

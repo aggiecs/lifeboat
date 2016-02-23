@@ -1,0 +1,178 @@
+{% extends "lifeboat/base.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+<li class="active">Summary</li>
+{% endblock %}
+
+{% block js %}
+<script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1.1','packages':['annotatedtimeline', 'corechart']}]}"></script>
+<script type='text/javascript' src='https://www.gstatic.com/charts/loader.js'></script>
+
+
+
+<script type="text/javascript">
+
+    var errors_url = "{% url "lifeboat-json-errors" %}";
+    var error_summary_url = "{% url "lifeboat-json-errors" %}?last_24_hours=1";
+
+    var error_table_state = { // keeps track of current page state.
+        "sort_by": ["-received"],
+        "current_page": 1,
+        "next_page": 0,
+        "previous_page": 0,
+        "last_page": 0,
+        "page_size": 10,
+        "errors_count": 0,
+        "failed_errors_count": 0,
+        "unhandled_errors_count": 0,
+        "handled_errors_count": 0,
+        "page": 1,
+        "error_being_viewed": null,
+        "errors": [],
+        "search_term": null,
+    };
+
+    var error_table_state_column_chart = { //used only to fetch the errors for the bar chart.
+        "sort_by": ["-received"],
+        "current_page": 1,
+        "next_page": 0,
+        "previous_page": 0,
+        "last_page": 0,
+        "page_size": 10000,
+        "errors_count": 0,
+        "failed_errors_count": 0,
+        "unhandled_errors_count": 0,
+        "handled_errors_count": 0,
+        "page": 1,
+        "error_being_viewed": null,
+        "errors": [],
+        "formatted_errors": [],
+        "module_errors_begin": 0,
+        "module_errors_end": 0,
+        "error_bucket_size": 1 //hours
+    };
+
+    var module_info_url_template = "{% url "lifeboat-module" "00" %}";
+    var error_link_template = "{% url "lifeboat-error" "00" %}";
+$(window).ready(function(){
+
+    function update_histogram(data){
+        error_table_state_column_chart["errors"] = data["errors"];
+        draw_module_histogram(error_table_state_column_chart, "Errors Encountered (last 24 hours)");
+    }
+
+    function fetch_errors_for_histogram(cb){
+        var data = {
+            "sort_by": error_table_state["sort_by"].join(','),
+            "page": error_table_state["page"],
+            "page_size": error_table_state["page_size"],
+            "module_id": error_table_state["module_id"],
+        };
+        $.get(error_summary_url, data, cb, "json");
+
+    }
+
+    $("#hide_error_overview_link")[0].addEventListener("click", function(event) {
+        var error_panel = $("#error_summary_panel");
+        error_panel.slideUp();
+        event.preventDefault();
+    });
+
+    $("#page-size-selector").on("change", function(event){
+        error_table_state["page_size"] = event.target.value;
+        fetch_errors(update_error_table_info);
+    });
+
+    $(".sortable").on("click", function(event){
+        handle_sort_change(event.target.id);
+    });
+
+    $("#error_search_input").on("input", function(event){
+        if(event.target.value.length > 3){
+            error_table_state["search_term"]= event.target.value;
+            fetch_errors(update_error_table_info);
+            window.setTimeout(update_progress_bars, 500);
+        }else{
+            if(error_table_state["search_term"] != null){
+                error_table_state["search_term"] = null;
+                fetch_errors(update_error_table_info);
+                window.setTimeout(update_progress_bars, 500);
+            }
+        }
+    });
+
+    $("#status_handled_label").on("click", function(){
+        var elem = $("#error_search_input");
+        var val = "is:handled";
+        elem.val(val);
+        error_table_state["search_term"] = val;
+        fetch_errors(update_error_table_info);
+        window.setTimeout(update_progress_bars, 500);
+    });
+    $("#status_unhandled_label").on("click", function(){
+        var elem = $("#error_search_input");
+        var val = "is:unhandled";
+        elem.val(val);
+        error_table_state["search_term"] = val;
+        fetch_errors(update_error_table_info);
+        window.setTimeout(update_progress_bars, 500);
+    });
+    $("#status_failed_label").on("click", function(){
+        var elem = $("#error_search_input");
+        var val = "is:failed";
+        elem.val(val);
+        error_table_state["search_term"] = val;
+        fetch_errors(update_error_table_info);
+        window.setTimeout(update_progress_bars, 500);
+    });
+
+
+    window.setInterval(function(){
+        fetch_errors(update_error_table_info);
+        window.setTimeout(update_progress_bars, 1000);
+    }, 10000);
+
+    window.setInterval(function(){
+        fetch_errors_for_histogram(update_histogram);
+    }, 60*1000);
+
+
+    fetch_errors_for_histogram(update_histogram);
+    fetch_errors(update_error_table_info);
+
+
+    $("#id_pattern").on("input", function(event){
+       update_log_regex();
+    });
+
+    $("#regex_log_line").on("input", function(event){
+        update_log_regex();
+    });
+
+});
+</script>
+{% endblock %}
+
+{% block css %}
+<style type="text/css" media="screen">
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+    <div id="chart_div">
+
+    </div>
+
+    {% include "lifeboat/error_table.html" %}
+
+
+    {% include "lifeboat/statistic_table.html" %}
+
+
+    {% include "lifeboat/edit_statistic_form.html" with is_modal=True %}
+
+
+{% endblock %}

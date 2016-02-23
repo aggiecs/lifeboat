@@ -1,0 +1,174 @@
+{% extends "lifeboat/base.html" %}
+{% load static %}
+
+{% block breadcrumbs %}
+    <li><a href="{% url "lifeboat-index" %}">Summary</a></li>
+    <li class="active">Module {{ module.name }}(id={{ module.id }})</li>
+{% endblock %}
+
+{% block js %}
+<script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1.1','packages':['annotatedtimeline', 'corechart']}]}"></script>
+<script type='text/javascript' src='https://www.gstatic.com/charts/loader.js'></script>
+
+<script type="text/javascript">
+google.charts.load('current', {'packages':['annotatedtimeline', 'corechart']});
+var errors_url = "{% url "lifeboat-json-errors" %}";
+var error_table_state = {
+        "sort_by": ["-received"],
+        "current_page": 1,
+        "next_page": 0,
+        "previous_page": 0,
+        "last_page": 0,
+        "module_id": {{ module.id }},
+        "page_size": 10000,
+        "errors_count": 0,
+        "failed_errors_count": 0,
+        "unhandled_errors_count": 0,
+        "handled_errors_count": 0,
+        "page": 1,
+        "error_being_viewed": null,
+        "errors": [],
+        "formatted_errors": [],
+        "module_errors_begin": 0,
+        "module_errors_end": 0,
+        "error_bucket_size": 1, //hours
+        "search_term": null
+    };
+var error_table_for_columns = {
+
+};
+
+var callback_rescue_destination_choices = {{ rescue_callback_choices|safe }};
+var module_info_url_template = "{% url "lifeboat-module" "00" %}";
+
+$(window).ready(function() {
+
+    fetch_errors(update_module_info);
+    fetch_errors(update_error_table_info);
+    window.setTimeout(update_progress_bars, 1500);
+
+    var orig_destination_html = '<input id="id_destination" maxlength="200" name="destination" type="text">';
+    var callback_rescue_destination_choices = {{ rescue_callback_choices|safe }};
+
+    var rescue_type_selector = $("#id_type");
+    rescue_type_selector.on("change", function(event){
+        console.log("change noticed:")
+        var value = event.target.value;
+        console.log("change noticed:" + value);
+        var destination_field = $("#id_destination");
+        var dest_html = "";
+        if(value == "callback"){
+            dest_html = "<select id='id_destination' name='destination'>";
+            for(var choice in callback_rescue_destination_choices){
+                dest_html += "<option value='" + choice + "'>" + callback_rescue_destination_choices[choice] + "</option>";
+            }
+            dest_html += "</select>"
+        }else{
+            dest_html = orig_destination_html;
+        }
+        destination_field.parent().html(dest_html);
+    });
+
+    $("#min_date").on("change", function(event){
+        var v = event.target.value;
+        var d = new Date();
+        if(v == "1hour"){
+            min_date = new Date(d - (60*60*1000));
+        }else if(v == "4hour"){
+            min_date = new Date(d - (60*60*1000*4));
+        }else if(v == "8hour"){
+            min_date = new Date(d - (60*60*1000*8));
+        }else if(v == "1day"){
+            min_date = new Date(d - (60*60*1000*24));
+        }else if(v == "1week"){
+            min_date = new Date(d - (60*60*1000*24*7));
+        }else if(v == "1month") {
+            min_date = new Date(d - (60 * 60 * 1000 * 24 * 30));
+        }else if(v == "first"){
+            min_date = null;
+        }
+        draw_module_histogram(error_table_state, "Errors Encountered");
+    });
+    $("#max_date").on("change", function(event){
+        var v = event.target.value;
+        var d = new Date();
+        if(v == "1hour"){
+            max_date = new Date(d - (60*60*1000));
+        }else if(v == "4hour"){
+            max_date = new Date(d - (60*60*1000*4));
+        }else if(v == "8hour"){
+            max_date = new Date(d - (60*60*1000*8));
+        }else if(v == "1day"){
+            max_date = new Date(d - (60*60*1000*24));
+        }else if(v == "1week"){
+            max_date = new Date(d - (60*60*1000*24*7));
+        }else if(v == "1month") {
+            max_date = new Date(d - (60 * 60 * 1000 * 24 * 30));
+        }else if(v == "last"){
+            max_date = null;
+        }
+        draw_module_histogram(error_table_state, "Errors Encountered")
+    });
+
+    window.setInterval(function(){
+        fetch_errors(update_error_table_info);
+        window.setTimeout(update_progress_bars, 1500);
+    }, 10*1000);
+
+    window.setInterval(function(){
+       fetch_errors(update_module_info);
+    }, 60*1000);
+
+    $(".rescue_pattern_popover").popover({ trigger: "hover" });
+});
+
+</script>
+{% endblock %}
+
+{% block css %}
+<style type="text/css" media="screen">
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+    <div class="row well">
+        <div id="traceback_overview" class="col-lg-12">
+            <legend>Module Overview:
+                <a class="cursor_pointer create_rescue_link" data-toggle="modal" data-target="#create_rescue_modal">Create Rescue</a>
+            </legend>
+            <div id="module_panel" class="module_panel">
+                <div id="chart_div">
+
+                </div>
+                <select disabled="true" id="min_date" class="min_max_date_selector">
+                    <option selected="selected" value="first">First</option>
+                    <option value="1hour">1 Hour</option>
+                    <option value="4hour">4 Hours</option>
+                    <option value="8hour">8 Hours</option>
+                    <option value="1day">1 Day</option>
+                    <option value="1week">1 Week</option>
+                    <option value="1month">1 Month</option>
+                </select>
+                <select disabled="true" id="max_date" class="min_max_date_selector">
+                    <option selected="selected" value="first">Last</option>
+                    <option value="1hour">1 Hour</option>
+                    <option value="4hour">4 Hours</option>
+                    <option value="8hour">8 Hours</option>
+                    <option value="1day">1 Day</option>
+                    <option value="1week">1 Week</option>
+                    <option value="1month">1 Month</option>
+                </select>
+            </div>
+        </div>
+
+    {% include "lifeboat/rescue_table.html" %}
+
+    {% include "lifeboat/error_table.html" %}
+
+    <div id="create_rescue_modal" class="modal fade" role="dialog">
+        {% include "lifeboat/edit_rescue_form.html" with is_modal=True %}
+    </div>
+
+{% endblock %}

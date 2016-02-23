@@ -1,0 +1,44 @@
+{% load static %}
+
+
+<form method="POST" action=".">
+{% csrf_token %}
+    {% if is_modal %}
+        <div id="create_statistic_modal" class="modal fade" role="dialog">
+        <form method="POST" action=".">
+        {% csrf_token %}
+            <div class="modal-dialog">
+                <!-- Modal content-->
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h4 class="modal-title">Create Statistic</h4>
+                    </div>
+                    <div class="modal-body">
+                        <table id="statistic_form_table">
+                        {{ stat_form.as_table }}
+                        </table>
+                        <hr>
+                        <textarea type="text" id="regex_log_line" >Add text here to test pattern.</textarea>
+                        <p id="regex_test_output"></p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                        <input type="submit" class="btn btn-default" value="Submit" />
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+    {% else %}
+        <table id="rescue_form_table">
+        {{ stat_form.as_table }}
+        </table>
+        <hr>
+        <textarea type="text" id="regex_log_line" >Add text here to test pattern.</textarea>
+        <p id="regex_test_output"></p>
+        <input id="rescue_form_submit" type="submit" />
+    {% endif %}
+</form>
+
+

@@ -1,0 +1,86 @@
+{% load static %}
+    <script type="text/javascript">
+        var error_link_template="{% url "lifeboat-error" "00" %}";
+        {% if module %}
+            var error_link_module = "?module_id={{ module.id }}";
+        {% else %}
+            var error_link_module = "";
+        {% endif %}
+    </script>
+    <div class="row">
+        <div id="errors_overview" class="col-lg-12">
+
+            <div class="error_progress_bar">
+                  <div id="error_progress_bar_legend">
+                      <span id="status_handled_label" class="{% if not module %}cursor_pointer{% endif %} label label-success">Handled</span>
+                      <span id="status_unhandled_label" class="{% if not module %}cursor_pointer{% endif %} label label-warning">Unhandled</span>
+                      <span id="status_failed_label" class="{% if not module %}cursor_pointer{% endif %} label label-danger">Failed</span>
+                  </div>
+                  <div class="progress">
+                    <div id="handled_bar" class="progress-bar progress-bar-success" title="{{ stats.handled_errors_count }}" style="width: {% widthratio stats.handled_errors_count stats.errors_count 100 %}%">
+                        <span>{{ stats.handled_errors_count }}</span>
+                    </div>
+                    <div id="unhandled_bar" class="progress-bar progress-bar-warning" title="{{ stats.unhandled_errors_count }}"  style="width: {% widthratio stats.unhandled_errors_count stats.errors_count 100 %}%">
+                        <span>{{ stats.unhandled_errors_count }}</span>
+                    </div>
+                    <div id="failed_bar" class="progress-bar progress-bar-danger" title="{{ stats.failed_errors_count }}" style="width: {% widthratio stats.failed_errors_count stats.errors_count 100 %}%">
+                        <span>{{ stats.failed_errors_count }}</span>
+                    </div>
+                  </div>
+            </div>
+            {% if not module %}
+                <span class="error_search">
+                   Search: <input id="error_search_input" type="text" />
+                </span>
+            {% endif %}
+
+            <table id="error-summary-table" class="table table-striped table-bordered table-hover">
+                <thead>
+                <tr>
+                    <td id="header_status" class="sortable"><span class="sort_icon"></span></td>
+                    <td id="header_id" class="sortable" >ID<span class="sort_icon"></span></td>
+                    <td id="header_module" class="">Module Name</td>
+                    <td id="header_exception" class="sortable">Exception<span class="sort_icon"></span></td>
+                    <td id="header_received" class="sortable sortable_descending">Occurred<span class="sort_icon glyphicon glyphicon-arrow-down"></span></td>
+                    <td>More Info</td>
+                </tr>
+                </thead>
+                <tbody>
+
+                <tr id="error-summary-table-loading-placeholder-row">
+                    <td id="error-summary-table-loading-placeholder-cell" colspan="6">
+                        <img id="error-summary-table-loading-placeholder" class="spinning" src="{% static "img/lifesaver-med.png" %}" />
+                    </td>
+                </tr>
+
+                </tbody>
+            </table>
+            {% if not module %}
+            <span>
+                Page Size:
+                <select id="page-size-selector">
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </span>
+            <ul id="error-summary-table-page-numbers" class="pagination">
+            </ul>
+            {% endif %}
+
+        </div>
+    </div>
+
+<div id="error_summary_panel" style="display:none;" class="row">
+        <legend>Error Overview:<span id="hide_error_overview_span"><a id="hide_error_overview_link">hide</a></span></legend>
+        <div id="error_summary">
+
+        </div>
+        <div id="tb_panel" class="col-lg-6">
+            <h4>Traceback:</h4>
+        </div>
+        <div id="var_panel" class="col-lg-6">
+            <h4>Variables:</h4>
+        </div>
+</div>
